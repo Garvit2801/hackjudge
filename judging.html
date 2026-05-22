@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>HackJudge — Evaluation</title>
+  <title>GAPL — Evaluation</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 </head>
 <body>
 <header class="site-header">
   <div class="header-inner">
-    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-gavel"></i></span>HackJudge</a>
+    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-cricket-bat-ball"></i></span>GAPL</a>
     <nav class="nav"><a href="index.html">Submit</a><a href="leaderboard.html">Leaderboard</a></nav>
   </div>
 </header>
@@ -56,7 +56,7 @@
   <div class="params-grid" id="params-grid"></div>
 
   <div class="final-card" id="final-card">
-    <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px">Final Score</p>
+    <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px">Final Score 🏏</p>
     <div class="final-score-num" id="final-score-num">—</div>
     <div style="font-size:14px;color:var(--text-3);margin-top:4px">out of 10.0</div>
     <div class="mini-score-grid" id="mini-score-grid"></div>
@@ -138,7 +138,7 @@ function fillMeta(sub) {
   document.getElementById('team-name').textContent     = name;
   document.getElementById('project-title').textContent = sub.project_title || '';
   document.getElementById('team-avatar').textContent   = name.charAt(0).toUpperCase();
-  document.title = 'HackJudge — ' + name;
+  document.title = 'GAPL — ' + name;
   const b = document.getElementById('meta-badges');
   if (sub.track) b.innerHTML += `<span class="badge badge-accent">${sub.track}</span>`;
   if (sub.id)    b.innerHTML += `<span class="badge badge-neutral font-mono">#${sub.id}</span>`;

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>HackJudge — Leaderboard</title>
+  <title>GAPL — Points Table</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 </head>
 <body>
 <header class="site-header">
   <div class="header-inner">
-    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-gavel"></i></span>HackJudge</a>
+    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-cricket-bat-ball"></i></span>GAPL</a>
     <nav class="nav">
       <a href="index.html">Submit</a>
       <a href="leaderboard.html" class="active">Leaderboard</a>
@@ -22,13 +22,25 @@
 </header>
 
 <div class="page-wrap page-wrap--lg">
-  <div style="padding:40px 0 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <div>
-      <h1 class="page-title"><i class="fa-solid fa-trophy" style="color:#d4a017;margin-right:10px"></i>Live Leaderboard</h1>
-      <p class="page-sub">Rankings update automatically as projects are evaluated</p>
+  <!-- IPL Points Table Header -->
+  <div style="background:linear-gradient(135deg,#003366,#1A3A6E);border-radius:var(--radius-lg);padding:24px 28px;margin:24px 0 20px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <span style="font-size:40px">🏆</span>
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;opacity:.7;margin-bottom:4px">Google Agentic Premier League 2026</div>
+        <h1 style="font-size:26px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px">Points Table</h1>
+        <p style="font-size:13px;opacity:.8">Live standings · Updated as teams are evaluated</p>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3)">
-      <div class="refresh-dot"></div>Auto-refreshes every 30s
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.8">
+        <div style="width:6px;height:6px;border-radius:50%;background:#34A853;animation:pulse 2s infinite"></div>
+        Live · Auto-refreshes every 30s
+      </div>
+      <div style="display:flex;gap:6px">
+        <span style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:12px;font-size:12px;font-weight:500">🏏 GAPL</span>
+        <span style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:12px;font-size:12px;font-weight:500">2026</span>
+      </div>
     </div>
   </div>
 

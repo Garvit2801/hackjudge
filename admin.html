@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>HackJudge — Admin</title>
+  <title>GAPL — Admin</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
@@ -21,7 +21,7 @@
 <div class="login-wrap" id="login-screen">
   <div class="login-box">
     <div class="admin-icon"><i class="fa-solid fa-shield-halved"></i></div>
-    <h2 style="font-size:20px;font-weight:700;margin-bottom:6px">Admin Panel</h2>
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:6px">GAPL Admin</h2>
     <p style="font-size:13px;color:var(--text-2);margin-bottom:24px;line-height:1.5">Enter your admin credentials to continue</p>
     <div style="text-align:left;margin-bottom:12px">
       <label class="label">Username</label>
@@ -34,7 +34,7 @@
         <button onclick="toggleLP()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px"><i class="fa-solid fa-eye" id="lp-eye"></i></button>
       </div>
     </div>
-    <button class="btn btn-primary full-width" onclick="doLogin()"><i class="fa-solid fa-unlock"></i> Access Admin Panel</button>
+    <button class="btn btn-primary full-width" onclick="doLogin()"><i class="fa-solid fa-unlock"></i> Access GAPL Admin</button>
     <p id="login-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px"></p>
   </div>
 </div>
@@ -43,7 +43,7 @@
 <div id="admin-screen" style="display:none">
   <header class="site-header">
     <div class="header-inner">
-      <div class="logo"><span class="logo-icon" style="background:var(--danger)"><i class="fa-solid fa-shield-halved"></i></span>Admin Panel</div>
+      <div class="logo"><span class="logo-icon" style="background:var(--danger)"><i class="fa-solid fa-shield-halved"></i></span>GAPL Admin</div>
       <span style="font-size:12px;color:var(--text-3);margin-left:4px">— not visible to participants</span>
       <nav class="nav" style="margin-left:auto">
         <button onclick="showTab('submissions')" id="tab-submissions" class="btn btn-secondary tab-active" style="font-size:13px;padding:6px 14px"><i class="fa-solid fa-list"></i> Submissions</button>
