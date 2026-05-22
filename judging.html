@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>HackJudge — Evaluation</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-gavel"></i></span>HackJudge</a>
+    <nav class="nav"><a href="index.html">Submit</a><a href="leaderboard.html">Leaderboard</a></nav>
+  </div>
+</header>
+
+<div class="page-wrap page-wrap--sm">
+  <div style="padding:32px 0 24px">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div class="team-avatar" id="team-avatar">?</div>
+      <div>
+        <h1 class="page-title" id="team-name">Loading…</h1>
+        <p class="page-sub" id="project-title"></p>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap" id="meta-badges"></div>
+    </div>
+  </div>
+
+  <div class="progress-strip">
+    <div class="progress-top">
+      <div class="spinner" id="spinner"></div>
+      <span class="progress-label" id="status-msg">Initialising…</span>
+      <span class="progress-pct" id="progress-pct">0%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  </div>
+
+  <div class="repo-info-card" id="repo-info-card">
+    <div style="font-size:13px;font-weight:600;color:var(--success);margin-bottom:8px"><i class="fa-brands fa-github"></i> Repository fetched</div>
+    <div class="chip-row" id="repo-chips"></div>
+  </div>
+
+  <div class="queue-card" id="queue-card">
+    <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:12px">Evaluating</div>
+    <div style="font-size:14px;color:var(--text-2);margin:8px 0 16px;line-height:1.6" id="queue-msg">Analysing your project…</div>
+    <div class="queue-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="error-card" id="error-card">
+    <p style="font-weight:600;color:var(--danger);margin-bottom:6px"><i class="fa-solid fa-circle-exclamation"></i> Evaluation failed</p>
+    <p id="error-msg" style="font-size:14px;color:var(--danger)"></p>
+    <a href="index.html" class="btn btn-secondary" style="margin-top:16px;display:inline-flex"><i class="fa-solid fa-arrow-left"></i> Try again</a>
+  </div>
+
+  <div class="params-grid" id="params-grid"></div>
+
+  <div class="final-card" id="final-card">
+    <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px">Final Score</p>
+    <div class="final-score-num" id="final-score-num">—</div>
+    <div style="font-size:14px;color:var(--text-3);margin-top:4px">out of 10.0</div>
+    <div class="mini-score-grid" id="mini-score-grid"></div>
+    <div class="feedback-section" style="margin-top:24px;text-align:left">
+      <div id="inferred-wrap">
+        <div class="feedback-label">What the agent understood your project to be</div>
+        <div class="inferred-box" id="inferred-purpose"></div>
+      </div>
+      <div class="grid-2 gap-16">
+        <div><div class="feedback-label">Overall feedback</div><p class="feedback-text" id="overall-feedback"></p></div>
+        <div>
+          <div class="feedback-label">Strengths</div><div id="strengths-list"></div>
+          <div class="feedback-label mt-12">Areas to improve</div><div id="weaknesses-list"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="openRejudge()"><i class="fa-solid fa-rotate-right"></i> Re-evaluate</button>
+        <a id="report-btn" href="#" target="_blank" class="btn btn-secondary"><i class="fa-solid fa-file-pdf"></i> Download Report</a>
+        <a href="leaderboard.html" class="btn btn-primary"><i class="fa-solid fa-trophy"></i> Leaderboard</a>
+      </div>
+    </div>
+  </div>
+  <div style="height:48px"></div>
+</div>
+
+<!-- Re-evaluate modal -->
+<div class="modal-overlay" id="rejudge-modal">
+  <div class="modal-box">
+    <div style="font-size:18px;font-weight:700;margin-bottom:6px"><i class="fa-solid fa-rotate-right" style="color:var(--accent);margin-right:8px"></i>Re-evaluate project</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6">Your key was cleared after the last evaluation. Enter it again to re-run — useful after pushing new code.</div>
+    <label class="label">Gemini API key <span style="color:var(--danger)">*</span></label>
+    <div style="position:relative">
+      <input class="input" id="rj-key" type="password" placeholder="AIza…" style="padding-right:44px" onkeydown="if(event.key==='Enter')submitRejudge()"/>
+      <button onclick="toggleRJ()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);font-size:15px"><i class="fa-solid fa-eye" id="rj-eye"></i></button>
+    </div>
+    <p id="rj-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px"></p>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeRejudge()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" id="rj-btn" onclick="submitRejudge()"><i class="fa-solid fa-play"></i> Start Re-evaluation</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-area"></div>
+
+<script src="config.js"></script>
+<script src="sheets-client.js"></script>
+<script src="gemini-client.js"></script>
+<script>
+const PARAMS = [
+  { key:'innovation',          label:'Innovation & Creativity',      weight:25, color:'#534AB7' },
+  { key:'technical_execution', label:'Technical Execution',          weight:30, color:'#0F6E56' },
+  { key:'completeness',        label:'Project Completeness',         weight:25, color:'#993C1D' },
+  { key:'ps_alignment',        label:'Problem Statement Alignment',  weight:15, color:'#185FA5' },
+  { key:'code_quality',        label:'Code Quality & Best Practices', weight:5, color:'#854F0B' },
+];
+
+const qs     = new URLSearchParams(window.location.search);
+const SUB_ID = (qs.get('id') || '').toUpperCase();
+if (!SUB_ID) window.location.href = 'index.html';
+
+let currentSub = null;
+
+function scoreColor(s) {
+  return s >= 8 ? 'var(--success)' : s >= 6 ? 'var(--info)' : s >= 4 ? 'var(--warn)' : 'var(--danger)';
+}
+function setProgress(pct, msg) {
+  if (pct !== null) { document.getElementById('progress-bar').style.width = pct + '%'; document.getElementById('progress-pct').textContent = Math.round(pct) + '%'; }
+  if (msg) document.getElementById('status-msg').textContent = msg;
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function showToast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toast-area').appendChild(t); setTimeout(() => t.remove(), 4000);
+}
+
+function fillMeta(sub) {
+  const name = sub.team_name || '—';
+  document.getElementById('team-name').textContent     = name;
+  document.getElementById('project-title').textContent = sub.project_title || '';
+  document.getElementById('team-avatar').textContent   = name.charAt(0).toUpperCase();
+  document.title = 'HackJudge — ' + name;
+  const b = document.getElementById('meta-badges');
+  if (sub.track) b.innerHTML += `<span class="badge badge-accent">${sub.track}</span>`;
+  if (sub.id)    b.innerHTML += `<span class="badge badge-neutral font-mono">#${sub.id}</span>`;
+}
+
+function showRepoInfo(d) {
+  document.getElementById('repo-info-card').classList.add('visible');
+  document.getElementById('repo-chips').innerHTML = [
+    { icon:'fa-code',       label: d.language },
+    { icon:'fa-file-code',  label: d.codeFiles + ' code files' },
+    { icon:'fa-folder',     label: d.totalFiles + ' total files' },
+    { icon:'fa-book',       label: d.hasReadme ? 'README found' : 'No README — code-only' },
+    { icon:'fa-code-commit',label: d.commits + ' commits' },
+    { icon:'fa-box',        label: d.hasDeps ? 'Dependencies found' : 'No dep file' },
+  ].map(i => `<span class="chip"><i class="fa-solid ${i.icon}"></i>${i.label}</span>`).join('');
+}
+
+function addParamCard(d) {
+  const grid = document.getElementById('params-grid');
+  const sc   = scoreColor(d.score);
+  const div  = document.createElement('div');
+  div.className = 'param-card'; div.id = 'param-' + d.key;
+  div.innerHTML = `
+    <div class="param-card-header">
+      <div class="param-dot" style="background:${d.color}"></div>
+      <span class="param-name">${d.label}</span>
+      <span class="param-score-num" style="color:${sc}">${d.score.toFixed(1)}</span>
+      <span class="param-weight">/${d.weight}%</span>
+    </div>
+    <div class="param-bar-wrap"><div class="param-bar" id="bar-${d.key}" style="background:${d.color}"></div></div>
+    <p class="param-reasoning">${d.reasoning}</p>`;
+  grid.appendChild(div);
+  requestAnimationFrame(() => {
+    div.classList.add('visible');
+    setTimeout(() => { document.getElementById('bar-' + d.key).style.width = (d.score * 10) + '%'; }, 100);
+  });
+}
+
+function renderFinal(result) {
+  const score = result.total_score;
+  const numEl = document.getElementById('final-score-num');
+  numEl.textContent = score.toFixed(2);
+  numEl.style.color = scoreColor(score);
+
+  const miniGrid = document.getElementById('mini-score-grid');
+  PARAMS.forEach(({ key, label }) => {
+    const s = result.scores?.[key]?.score ?? 0;
+    const cell = document.createElement('div'); cell.className = 'mini-score';
+    cell.innerHTML = `<div class="mini-score-val" style="color:${scoreColor(s)}">${Number(s).toFixed(1)}</div><div class="mini-score-lbl">${label.split(' ')[0]}</div>`;
+    miniGrid.appendChild(cell);
+  });
+
+  const fb = result.feedback || {};
+  if (fb.inferred_purpose || result.inferred_purpose)
+    document.getElementById('inferred-purpose').textContent = fb.inferred_purpose || result.inferred_purpose;
+  else document.getElementById('inferred-wrap').style.display = 'none';
+
+  document.getElementById('overall-feedback').textContent = fb.overall || result.overall_feedback || '';
+  (fb.strengths  || result.strengths  || []).forEach(s => { document.getElementById('strengths-list').innerHTML  += `<div class="sw-item"><i class="fa-solid fa-check" style="color:var(--success)"></i>${s}</div>`; });
+  (fb.weaknesses || result.weaknesses || []).forEach(w => { document.getElementById('weaknesses-list').innerHTML += `<div class="sw-item"><i class="fa-solid fa-arrow-right" style="color:var(--danger)"></i>${w}</div>`; });
+
+  const confBadge = (c) => c==='high'?'badge-success':c==='medium'?'badge-warn':'badge-neutral';
+  const mode = (fb.analysis_mode||result.analysis_mode||'').replace(/_/g,' ');
+  document.getElementById('meta-badges').innerHTML += `<span class="badge ${confBadge(fb.confidence||result.confidence)}">Confidence: ${fb.confidence||result.confidence||'medium'}</span>`;
+  if (mode) document.getElementById('meta-badges').innerHTML += `<span class="badge badge-neutral">${mode}</span>`;
+
+  document.getElementById('report-btn').href = 'report.html?id=' + SUB_ID;
+  document.getElementById('final-card').classList.add('visible');
+  document.getElementById('spinner').style.display = 'none';
+}
+
+function showError(msg) {
+  document.getElementById('error-card').classList.add('visible');
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('spinner').style.display = 'none';
+}
+
+function showQueueMsg(msg) {
+  document.getElementById('queue-card').classList.add('visible');
+  document.getElementById('queue-msg').textContent = msg;
+}
+function hideQueue() { document.getElementById('queue-card').classList.remove('visible'); }
+
+// ── Main evaluation pipeline ──────────────────────────────────────────────────
+async function runEvaluation(sub, apiKey) {
+  setProgress(5, 'Initialising evaluation pipeline…');
+  await delay(300);
+
+  // GitHub fetch
+  setProgress(15, 'Fetching repository from GitHub…');
+  let repoData;
+  try { repoData = await fetchRepoData(sub.github_url); }
+  catch (e) { showError('GitHub fetch failed: ' + e.message); return; }
+
+  hideQueue();
+  showRepoInfo({
+    language:   repoData.meta.language,
+    codeFiles:  repoData.codeFiles.length,
+    totalFiles: repoData.files.length,
+    hasReadme:  repoData.readme.length > 60,
+    commits:    repoData.commits.length,
+    hasDeps:    Object.keys(repoData.deps).length > 0,
+  });
+  setProgress(38, 'Repository fetched — sending to Gemini…');
+  await delay(400);
+
+  // Gemini (runs fully before we show scores — this is the JS limitation)
+  setProgress(50, 'Gemini is analysing your code…');
+  showQueueMsg('Gemini is reading your code and evaluating each parameter…');
+
+  let result;
+  const THINKING_MSGS = [
+    'Analysing project structure…',
+    'Evaluating technical execution…',
+    'Checking problem statement alignment…',
+    'Reviewing code quality…',
+    'Almost there — computing final scores…',
+  ];
+  let msgIdx = 0;
+  const thinkInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % THINKING_MSGS.length;
+    showQueueMsg(THINKING_MSGS[msgIdx]);
+    setProgress(50 + Math.min(msgIdx * 2, 8), THINKING_MSGS[msgIdx]);
+  }, 8000);
+
+  try {
+    result = await analyzeWithGemini(repoData, sub.problem_statement, apiKey, sub.project_description || '');
+  } catch (e) {
+    clearInterval(thinkInterval);
+    showError('Gemini analysis failed: ' + e.message);
+    return;
+  }
+  clearInterval(thinkInterval);
+  apiKey = null; // wipe from memory
+
+  hideQueue();
+  setProgress(62, 'Scores computed — revealing results…');
+  await delay(400);
+
+  // Reveal scores with animation
+  const scores = result.scores || {};
+  let progress = 64;
+  for (const p of PARAMS) {
+    const s = scores[p.key] || {};
+    addParamCard({ key:p.key, label:p.label, weight:p.weight, color:p.color, score:s.score??0, reasoning:s.reasoning||'—' });
+    setProgress(progress, 'Scored: ' + p.label);
+    progress += 6;
+    await delay(900);
+  }
+
+  setProgress(100, 'Evaluation complete!');
+
+  // Build and save updated record
+  const updated = {
+    ...sub, status: 'scored',
+    scores,
+    total_score: result.total_score,
+    feedback: {
+      overall: result.overall_feedback || '',
+      strengths: result.strengths || [],
+      weaknesses: result.weaknesses || [],
+      inferred_purpose: result.inferred_purpose || '',
+      confidence: result.confidence || 'medium',
+      analysis_mode: result.analysis_mode || 'code_only',
+    },
+  };
+
+  try { await saveSubmission(SUB_ID, updated); currentSub = updated; }
+  catch (e) { console.warn('Save failed:', e.message); }
+
+  renderFinal({ total_score: result.total_score, scores, feedback: updated.feedback,
+    inferred_purpose: result.inferred_purpose, overall_feedback: result.overall_feedback,
+    strengths: result.strengths, weaknesses: result.weaknesses,
+    confidence: result.confidence, analysis_mode: result.analysis_mode });
+}
+
+function resetUI() {
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-pct').textContent = '0%';
+  document.getElementById('status-msg').textContent = 'Initialising…';
+  document.getElementById('spinner').style.display = 'flex';
+  document.getElementById('params-grid').innerHTML = '';
+  document.getElementById('repo-info-card').classList.remove('visible');
+  document.getElementById('repo-chips').innerHTML = '';
+  document.getElementById('queue-card').classList.remove('visible');
+  const fc = document.getElementById('final-card');
+  fc.classList.remove('visible');
+  document.getElementById('final-score-num').textContent = '—';
+  document.getElementById('mini-score-grid').innerHTML = '';
+  document.getElementById('inferred-purpose').textContent = '';
+  document.getElementById('overall-feedback').textContent = '';
+  document.getElementById('strengths-list').innerHTML = '';
+  document.getElementById('weaknesses-list').innerHTML = '';
+  document.getElementById('inferred-wrap').style.display = '';
+  document.getElementById('error-card').classList.remove('visible');
+  // Strip dynamic badges (keep first 2: track + id)
+  const b = document.getElementById('meta-badges');
+  const keep = Array.from(b.children).slice(0, 2);
+  b.innerHTML = ''; keep.forEach(x => b.appendChild(x));
+}
+
+async function startJudging() {
+  let sub;
+  try { sub = await loadSubmission(SUB_ID); }
+  catch (e) { showError('Submission not found: ' + e.message); return; }
+  if (!sub) { showError('Submission not found. Please re-submit.'); return; }
+
+  currentSub = sub;
+  fillMeta(sub);
+
+  // Already scored — replay
+  if (sub.status === 'scored' && sub.scores) {
+    setProgress(100, 'Evaluation complete');
+    PARAMS.forEach(p => {
+      const s = sub.scores[p.key];
+      if (s) addParamCard({ key:p.key, label:p.label, weight:p.weight, color:p.color, score:s.score, reasoning:s.reasoning });
+    });
+    renderFinal({ total_score: sub.total_score, scores: sub.scores, feedback: sub.feedback });
+    return;
+  }
+
+  // Get API key from sessionStorage (set on submit page)
+  const apiKey = sessionStorage.getItem('key_' + SUB_ID);
+  sessionStorage.removeItem('key_' + SUB_ID);
+
+  if (!apiKey) {
+    document.getElementById('spinner').style.display = 'none';
+    setProgress(0, 'API key required');
+    openRejudge('Enter your Gemini API key to start evaluation.');
+    return;
+  }
+
+  await runEvaluation(sub, apiKey);
+}
+
+// ── Re-evaluate modal ─────────────────────────────────────────────────────────
+function openRejudge(msg) {
+  document.getElementById('rejudge-modal').classList.add('show');
+  document.getElementById('rj-key').value = '';
+  const e = document.getElementById('rj-error');
+  if (msg) { e.textContent = msg; e.style.display = 'block'; } else { e.style.display = 'none'; }
+  document.getElementById('rj-btn').disabled = false;
+  document.getElementById('rj-btn').innerHTML = '<i class="fa-solid fa-play"></i> Start Re-evaluation';
+  setTimeout(() => document.getElementById('rj-key').focus(), 100);
+}
+function closeRejudge() {
+  document.getElementById('rejudge-modal').classList.remove('show');
+  document.getElementById('rj-key').value = '';
+}
+function toggleRJ() {
+  const i = document.getElementById('rj-key'), e = document.getElementById('rj-eye');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  e.className = i.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+}
+async function submitRejudge() {
+  const key = document.getElementById('rj-key').value.trim();
+  const errEl = document.getElementById('rj-error');
+  if (!key) { errEl.textContent = 'Please enter your Gemini API key.'; errEl.style.display = 'block'; return; }
+  const btn = document.getElementById('rj-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px"></span> Starting…';
+  document.getElementById('rj-key').value = '';
+  closeRejudge(); resetUI();
+  const sub = currentSub || await loadSubmission(SUB_ID);
+  await runEvaluation(sub, key);
+}
+
+document.getElementById('rejudge-modal').addEventListener('click', e => { if (e.target === document.getElementById('rejudge-modal')) closeRejudge(); });
+startJudging();
+</script>
+</body>
+</html>

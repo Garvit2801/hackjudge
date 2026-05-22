@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>HackJudge — Admin</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:40px;width:100%;max-width:400px;box-shadow:var(--shadow);text-align:center}
+    .admin-header{padding:28px 0 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:200;padding:24px}
+    .confirm-overlay.show{display:flex}
+    .confirm-box{background:var(--surface);border-radius:var(--radius-lg);padding:28px 32px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.2)}
+  </style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-box">
+    <div class="admin-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:6px">Admin Panel</h2>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:24px;line-height:1.5">Enter your admin credentials to continue</p>
+    <div style="text-align:left;margin-bottom:12px">
+      <label class="label">Username</label>
+      <input class="input" id="login-user" type="text" placeholder="Admin username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/>
+    </div>
+    <div style="text-align:left;margin-bottom:16px">
+      <label class="label">Password</label>
+      <div style="position:relative">
+        <input class="input" id="login-pass" type="password" placeholder="Admin password" style="padding-right:42px" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button onclick="toggleLP()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px"><i class="fa-solid fa-eye" id="lp-eye"></i></button>
+      </div>
+    </div>
+    <button class="btn btn-primary full-width" onclick="doLogin()"><i class="fa-solid fa-unlock"></i> Access Admin Panel</button>
+    <p id="login-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px"></p>
+  </div>
+</div>
+
+<!-- Admin dashboard -->
+<div id="admin-screen" style="display:none">
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo"><span class="logo-icon" style="background:var(--danger)"><i class="fa-solid fa-shield-halved"></i></span>Admin Panel</div>
+      <span style="font-size:12px;color:var(--text-3);margin-left:4px">— not visible to participants</span>
+      <nav class="nav" style="margin-left:auto">
+        <button onclick="showTab('submissions')" id="tab-submissions" class="btn btn-secondary tab-active" style="font-size:13px;padding:6px 14px"><i class="fa-solid fa-list"></i> Submissions</button>
+        <button onclick="showTab('bulk')" id="tab-bulk" class="btn btn-secondary" style="font-size:13px;padding:6px 14px"><i class="fa-solid fa-bolt"></i> Bulk Test</button>
+        <a href="leaderboard.html" style="color:var(--text-2);text-decoration:none;font-size:13px;padding:6px 8px"><i class="fa-solid fa-arrow-left"></i> Back</a>
+        <button onclick="doLogout()" class="btn btn-secondary" style="font-size:13px;padding:6px 14px"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Submissions tab -->
+  <div id="tab-submissions-panel" class="page-wrap page-wrap--lg" style="padding-top:0">
+    <div class="admin-header">
+      <div><h1 class="page-title" style="font-size:22px">Submissions</h1><p class="page-sub" style="font-size:13px" id="last-refresh">Loading…</p></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="loadSubmissions()" style="font-size:13px"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        <button onclick="confirmAll()" style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--danger);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer"><i class="fa-solid fa-trash-can"></i> Delete all</button>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--success)" id="s-scored">—</div><div class="stat-lbl">Scored</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--warn)" id="s-pending">—</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--danger)" id="s-error">—</div><div class="stat-lbl">Error</div></div>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table style="table-layout:fixed;width:100%">
+          <colgroup><col style="width:80px"/><col style="width:150px"/><col style="width:160px"/><col style="width:130px"/><col style="width:90px"/><col style="width:70px"/><col style="width:140px"/><col style="width:90px"/></colgroup>
+          <thead><tr><th>ID</th><th>Team</th><th>Project</th><th>Track</th><th>Status</th><th>Score</th><th>Submitted</th><th>Actions</th></tr></thead>
+          <tbody id="admin-tbody"><tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-3)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="height:48px"></div>
+  </div>
+
+  <!-- Bulk test tab -->
+  <div id="tab-bulk-panel" class="page-wrap page-wrap--lg" style="display:none;padding-top:0">
+    <div class="admin-header">
+      <div><h1 class="page-title" style="font-size:22px"><i class="fa-solid fa-bolt" style="color:var(--accent);margin-right:8px"></i>Bulk Test</h1>
+      <p class="page-sub" style="font-size:13px">Submit multiple projects at once for testing.</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <div>
+        <label class="label">Gemini API Key (for all test submissions) <span style="color:var(--danger)">*</span></label>
+        <div style="position:relative">
+          <input class="input" id="bulk-key" type="password" placeholder="AIza…" style="padding-right:42px"/>
+          <button onclick="toggleBK()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px"><i class="fa-solid fa-eye" id="bk-eye"></i></button>
+        </div>
+      </div>
+      <div>
+        <label class="label">Track (applied to all)</label>
+        <input class="input" id="bulk-track" type="text" placeholder="e.g. Open Innovation"/>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="label">Problem Statement (applied to all) <span style="color:var(--danger)">*</span></label>
+      <textarea class="textarea" id="bulk-ps" rows="3" style="min-height:80px" placeholder="Paste the problem statement here…"></textarea>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:600">Projects</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add row</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="loadSamples()"><i class="fa-solid fa-flask"></i> Load samples</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="clearRows()"><i class="fa-solid fa-trash"></i> Clear</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table style="table-layout:fixed;width:100%">
+          <colgroup><col style="width:140px"/><col style="width:150px"/><col style="width:140px"/><col style="width:160px"/><col style="width:260px"/><col style="width:36px"/></colgroup>
+          <thead><tr><th>Team name</th><th>Project title</th><th>Members</th><th>Email</th><th>GitHub URL</th><th></th></tr></thead>
+          <tbody id="bulk-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
+      <button class="btn btn-primary" id="bulk-run-btn" onclick="runBulk()" style="font-size:14px"><i class="fa-solid fa-play"></i> Run Bulk Test</button>
+      <span id="bulk-status" style="font-size:13px;color:var(--text-2)"></span>
+    </div>
+    <div id="bulk-results" style="display:none">
+      <div class="section-head">Results</div>
+      <div id="bulk-results-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div style="height:48px"></div>
+  </div>
+</div>
+
+<!-- Confirm single delete -->
+<div class="confirm-overlay" id="conf-single">
+  <div class="confirm-box">
+    <div style="font-size:17px;font-weight:700;margin-bottom:8px"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);margin-right:8px"></i>Delete submission?</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6" id="conf-single-msg">This cannot be undone.</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeConf('conf-single')">Cancel</button>
+      <button class="btn" style="flex:1;background:var(--danger);color:#fff" id="conf-single-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete all -->
+<div class="confirm-overlay" id="conf-all">
+  <div class="confirm-box">
+    <div style="font-size:17px;font-weight:700;margin-bottom:8px"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);margin-right:8px"></i>Delete ALL submissions?</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.6">This permanently removes every submission. The leaderboard will be empty. Cannot be undone.</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeConf('conf-all')">Cancel</button>
+      <button class="btn" style="flex:1.5;background:var(--danger);color:#fff" onclick="deleteAll()"><i class="fa-solid fa-trash-can"></i> Yes, delete all</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-area"></div>
+
+<script src="config.js"></script>
+<script src="sheets-client.js"></script>
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const u = sessionStorage.getItem('admin_user');
+  const p = sessionStorage.getItem('admin_pass');
+  sessionStorage.removeItem('admin_user');
+  sessionStorage.removeItem('admin_pass');
+  if (u && p && u === CONFIG.ADMIN_USERNAME && p === CONFIG.ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    loadSubmissions();
+  }
+});
+
+function toggleLP() { const i=document.getElementById('login-pass'),e=document.getElementById('lp-eye'); i.type=i.type==='password'?'text':'password'; e.className=i.type==='password'?'fa-solid fa-eye':'fa-solid fa-eye-slash'; }
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!u || !p) { errEl.textContent = 'Please enter both fields.'; errEl.style.display = 'block'; return; }
+  if (u === CONFIG.ADMIN_USERNAME && p === CONFIG.ADMIN_PASSWORD) {
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    loadSubmissions();
+  } else {
+    document.getElementById('login-pass').value = '';
+    errEl.textContent = 'Incorrect username or password.';
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() { window.location.href = 'index.html'; }
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function showTab(tab) {
+  const isSub = tab === 'submissions';
+  document.getElementById('tab-submissions-panel').style.display = isSub ? 'block' : 'none';
+  document.getElementById('tab-bulk-panel').style.display        = isSub ? 'none'  : 'block';
+  document.getElementById('tab-submissions').classList.toggle('tab-active', isSub);
+  document.getElementById('tab-bulk').classList.toggle('tab-active', !isSub);
+}
+
+// ── Submissions ───────────────────────────────────────────────────────────────
+let allSubs = [];
+
+function sColor(s) { return s>=8?'var(--success)':s>=6?'var(--info)':s>=4?'var(--warn)':'var(--danger)'; }
+function showToast(msg, isErr=false) {
+  const t = document.createElement('div'); t.className='toast'+(isErr?' toast-error':''); t.textContent=msg;
+  document.getElementById('toast-area').appendChild(t); setTimeout(()=>t.remove(),4000);
+}
+function closeConf(id) { document.getElementById(id).classList.remove('show'); }
+
+async function loadSubmissions() {
+  try {
+    allSubs = await loadAllSubmissionsAdmin();
+    const records = allSubs.map(s => s.record);
+    document.getElementById('s-total').textContent   = records.length;
+    document.getElementById('s-scored').textContent  = records.filter(r => r.status==='scored').length;
+    document.getElementById('s-pending').textContent = records.filter(r => ['pending','judging'].includes(r.status)).length;
+    document.getElementById('s-error').textContent   = records.filter(r => r.status==='error').length;
+    document.getElementById('last-refresh').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString() + '  ·  ' + records.length + ' submissions';
+    renderTable(allSubs);
+  } catch (e) { showToast('Load failed: ' + e.message, true); }
+}
+
+function renderTable(subs) {
+  const tbody = document.getElementById('admin-tbody');
+  if (!subs.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text-3)"><i class="fa-solid fa-inbox" style="font-size:28px;display:block;margin-bottom:10px"></i>No submissions yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  subs.forEach(({ record: sub, sha }) => {
+    const sc = sub.total_score != null ? `<span style="font-weight:700;color:${sColor(sub.total_score)}">${Number(sub.total_score).toFixed(2)}</span>` : '—';
+    const statusCls = {scored:'s-scored',pending:'s-pending',judging:'s-judging',error:'s-error'}[sub.status]||'s-pending';
+    const date = new Date(sub.created_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    const tr = document.createElement('tr'); tr.id = 'row-' + sub.id;
+    tr.innerHTML = `
+      <td class="font-mono" style="font-size:12px;color:var(--text-3)">#${sub.id}</td>
+      <td style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${sub.team_name}">${sub.team_name}</td>
+      <td style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2)" title="${sub.project_title}">${sub.project_title}</td>
+      <td><span class="badge badge-accent" style="font-size:11px">${sub.track||'—'}</span></td>
+      <td><span class="status-pill ${statusCls}">${sub.status}</span></td>
+      <td style="text-align:center">${sc}</td>
+      <td style="font-size:12px;color:var(--text-3)">${date}</td>
+      <td><button class="del-btn" onclick="confirmDelete('${sub.id}','${sub.team_name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash-can"></i> Delete</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+let pendingDel = null;
+function confirmDelete(id, name) {
+  pendingDel = { id };
+  document.getElementById('conf-single-msg').textContent = 'This will permanently delete "' + name + '" (#' + id + '). Cannot be undone.';
+  document.getElementById('conf-single').classList.add('show');
+  document.getElementById('conf-single-ok').onclick = doDeleteOne;
+}
+async function doDeleteOne() {
+  closeConf('conf-single');
+  try {
+    await deleteSubmission(pendingDel.id);
+    const row = document.getElementById('row-' + pendingDel.id);
+    if (row) row.remove();
+    showToast('Deleted #' + pendingDel.id);
+    await loadSubmissions();
+  } catch (e) { showToast('Delete failed: ' + e.message, true); }
+}
+
+function confirmAll() { document.getElementById('conf-all').classList.add('show'); }
+async function deleteAll() {
+  closeConf('conf-all');
+  try {
+    await deleteAllSubmissions();
+    showToast('All submissions deleted');
+    await loadSubmissions();
+  } catch (e) { showToast('Delete failed: ' + e.message, true); }
+}
+
+document.addEventListener('click', e => {
+  ['conf-single','conf-all'].forEach(id => { const el=document.getElementById(id); if (e.target===el) el.classList.remove('show'); });
+});
+
+// ── Bulk test ─────────────────────────────────────────────────────────────────
+let rowIdx = 0;
+
+function toggleBK() { const i=document.getElementById('bulk-key'),e=document.getElementById('bk-eye'); i.type=i.type==='password'?'text':'password'; e.className=i.type==='password'?'fa-solid fa-eye':'fa-solid fa-eye-slash'; }
+function addRow(d={}) {
+  const id = ++rowIdx;
+  const tr = document.createElement('tr'); tr.id = 'br-' + id;
+  tr.innerHTML = `
+    <td><input class="bulk-input" id="bt-${id}" placeholder="Team name" value="${d.team||''}"/></td>
+    <td><input class="bulk-input" id="bti-${id}" placeholder="Project title" value="${d.title||''}"/></td>
+    <td><input class="bulk-input" id="bm-${id}" placeholder="Members" value="${d.members||''}"/></td>
+    <td><input class="bulk-input" id="be-${id}" placeholder="email@example.com" value="${d.email||''}"/></td>
+    <td><input class="bulk-input" id="bu-${id}" placeholder="https://github.com/owner/repo" value="${d.url||''}"/></td>
+    <td><button onclick="document.getElementById('br-${id}').remove()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;padding:4px"><i class="fa-solid fa-xmark"></i></button></td>`;
+  document.getElementById('bulk-rows').appendChild(tr);
+}
+function clearRows() { document.getElementById('bulk-rows').innerHTML = ''; rowIdx = 0; }
+function loadSamples() {
+  clearRows();
+  [{ team:'Sample Team A',title:'AI Health Monitor',members:'Alice, Bob',email:'a@test.com',url:'https://github.com/tiangolo/fastapi' },
+   { team:'Sample Team B',title:'EduBot',members:'Carol, Dave',email:'b@test.com',url:'https://github.com/pallets/flask' },
+   { team:'Sample Team C',title:'GreenTrack',members:'Eve',email:'c@test.com',url:'https://github.com/django/django' }]
+  .forEach(addRow);
+}
+function getRows() {
+  return Array.from(document.querySelectorAll('[id^="br-"]')).map(tr => {
+    const i = tr.id.replace('br-','');
+    return { team:document.getElementById('bt-'+i)?.value.trim(), title:document.getElementById('bti-'+i)?.value.trim(), members:document.getElementById('bm-'+i)?.value.trim(), email:document.getElementById('be-'+i)?.value.trim(), url:document.getElementById('bu-'+i)?.value.trim() };
+  }).filter(r => r.team && r.url);
+}
+function setBulkStatus(msg, color='var(--text-2)') { const e=document.getElementById('bulk-status'); e.textContent=msg; e.style.color=color; }
+
+function addBulkResult(sub, state) {
+  document.getElementById('bulk-results').style.display = 'block';
+  const list = document.getElementById('bulk-results-list');
+  const existing = document.getElementById('res-' + sub.id);
+  const div = existing || document.createElement('div');
+  div.id = 'res-' + sub.id; div.className = 'bulk-result-row';
+  const icon = state.status==='done'?'<i class="fa-solid fa-check" style="color:var(--success)"></i>':state.status==='error'?'<i class="fa-solid fa-xmark" style="color:var(--danger)"></i>':'<span class="spinner" style="width:14px;height:14px;border-width:2px"></span>';
+  const sc = state.score!=null ? sColor(state.score) : 'var(--text-3)';
+  div.innerHTML = `${icon}<div class="bulk-result-score" style="color:${sc}">${state.score!=null?Number(state.score).toFixed(2):'—'}</div><div class="bulk-result-meta"><div class="bulk-result-name">${sub.team} — ${sub.title}</div><div class="bulk-result-sub">#${sub.id} · ${state.msg}</div></div>${state.status==='done'?`<a href="judging.html?id=${sub.id}" target="_blank" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">View</a>`:''}`;
+  if (!existing) list.appendChild(div);
+}
+
+async function pollOne(sub) {
+  const deadline = Date.now() + 300000;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 7000));
+    try {
+      const data = await loadSubmission(sub.id);
+      if (!data) continue;
+      if (data.status === 'scored') { addBulkResult(sub, { status:'done', score:data.total_score, msg:'Scored ' + data.total_score?.toFixed(2) + '/10' }); return; }
+      if (data.status === 'error')  { addBulkResult(sub, { status:'error', score:null, msg:'Evaluation failed' }); return; }
+      addBulkResult(sub, { status:'running', score:null, msg:data.status === 'judging' ? 'Evaluating…' : 'Queued…' });
+    } catch {}
+  }
+  addBulkResult(sub, { status:'error', score:null, msg:'Timed out' });
+}
+
+async function runBulk() {
+  const key   = document.getElementById('bulk-key').value.trim();
+  const track = document.getElementById('bulk-track').value.trim();
+  const ps    = document.getElementById('bulk-ps').value.trim();
+  const rows  = getRows();
+  if (!key)       { setBulkStatus('Enter a Gemini API key.','var(--danger)'); return; }
+  if (!ps)        { setBulkStatus('Enter a problem statement.','var(--danger)'); return; }
+  if (!rows.length){ setBulkStatus('Add at least one project row.','var(--danger)'); return; }
+
+  const btn = document.getElementById('bulk-run-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px"></span> Running…';
+  document.getElementById('bulk-results').style.display = 'block';
+  document.getElementById('bulk-results-list').innerHTML = '';
+  setBulkStatus('Submitting ' + rows.length + ' project(s)…', 'var(--info)');
+
+  const subs = [];
+  for (const row of rows) {
+    try {
+      const id = (Math.random().toString(36).substring(2,6) + Math.random().toString(36).substring(2,6)).toUpperCase();
+      const record = {
+        id, status:'pending', created_at: new Date().toISOString(),
+        team_name: row.team, project_title: row.title||row.team+' Project',
+        member_names: row.members||row.team, contact_email: row.email||'test@example.com',
+        track: track||'Test', problem_statement: ps,
+        github_url: row.url, project_description: '',
+        scores:null, total_score:null, feedback:null,
+      };
+      // Store key in sessionStorage for this submission
+      sessionStorage.setItem('key_' + id, key);
+      await saveSubmission(id, record);
+      const sub = { id, team: row.team, title: row.title||row.team+' Project' };
+      subs.push(sub);
+      addBulkResult(sub, { status:'running', score:null, msg:'Submitted — starting evaluation…' });
+      setBulkStatus(subs.length + '/' + rows.length + ' submitted…', 'var(--info)');
+
+      // Immediately trigger evaluation in background using iframe trick
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = 'judging.html?id=' + id;
+      document.body.appendChild(iframe);
+      // Remove iframe after 5 min
+      setTimeout(() => iframe.remove(), 300000);
+
+    } catch (e) {
+      document.getElementById('bulk-results-list').innerHTML += `<div class="bulk-result-row"><i class="fa-solid fa-xmark" style="color:var(--danger)"></i><div class="bulk-result-meta"><div class="bulk-result-name">${row.team}</div><div class="bulk-result-sub">${e.message}</div></div></div>`;
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  document.getElementById('bulk-key').value = ''; // wipe key
+
+  setBulkStatus('All submitted — polling results…', 'var(--info)');
+  await Promise.all(subs.map(sub => pollOne(sub)));
+  setBulkStatus('Done — ' + subs.length + ' project(s) evaluated.', 'var(--success)');
+  btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-play"></i> Run Bulk Test';
+  await loadSubmissions();
+}
+</script>
+</body>
+</html>

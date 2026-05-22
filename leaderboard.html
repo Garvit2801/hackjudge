@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>HackJudge — Leaderboard</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-gavel"></i></span>HackJudge</a>
+    <nav class="nav">
+      <a href="index.html">Submit</a>
+      <a href="leaderboard.html" class="active">Leaderboard</a>
+      <button onclick="openAdminLogin()" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;border:1px solid var(--border-md);background:var(--bg);color:var(--text-2);cursor:pointer;transition:background .15s" onmouseover="this.style.background='#eae9e5'" onmouseout="this.style.background='var(--bg)'">
+        <i class="fa-solid fa-shield-halved" style="font-size:12px"></i> Admin
+      </button>
+    </nav>
+  </div>
+</header>
+
+<div class="page-wrap page-wrap--lg">
+  <div style="padding:40px 0 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 class="page-title"><i class="fa-solid fa-trophy" style="color:#d4a017;margin-right:10px"></i>Live Leaderboard</h1>
+      <p class="page-sub">Rankings update automatically as projects are evaluated</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3)">
+      <div class="refresh-dot"></div>Auto-refreshes every 30s
+    </div>
+  </div>
+
+  <div class="lb-controls">
+    <div class="track-filter" id="track-filter">
+      <button class="track-btn active" onclick="filterTrack('all',this)">All tracks</button>
+    </div>
+    <span class="lb-count" id="lb-count">Loading…</span>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table id="lb-table" style="table-layout:fixed;width:100%">
+        <colgroup>
+          <col style="width:52px"/><col style="width:220px"/><col style="width:140px"/>
+          <col style="width:88px"/><col style="width:88px"/><col style="width:104px"/>
+          <col style="width:84px"/><col style="width:68px"/><col style="width:80px"/>
+          <col style="width:36px"/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Rank</th><th>Team &amp; Project</th><th>Track</th>
+            <th class="th-score">Innovation</th><th class="th-score">Technical</th>
+            <th class="th-score">Completeness</th><th class="th-score">PS Align</th>
+            <th class="th-score">Code</th><th class="th-score">Total</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="lb-tbody">
+          <tr><td colspan="10">
+            <div style="text-align:center;padding:48px;color:var(--text-3)">
+              <span class="spinner" style="display:block;margin:0 auto 12px;width:28px;height:28px"></span>
+              <p>Loading submissions…</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div style="height:48px"></div>
+</div>
+
+<!-- Admin login modal -->
+<div class="modal-overlay" id="admin-login-modal">
+  <div class="modal-box" style="max-width:380px;text-align:center">
+    <div class="admin-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <h2 style="font-size:19px;font-weight:700;margin-bottom:6px">Admin Access</h2>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:22px;line-height:1.5">Enter your admin credentials to manage submissions</p>
+    <div style="text-align:left;margin-bottom:12px">
+      <label class="label">Username</label>
+      <input class="input" id="adm-user" type="text" placeholder="Admin username" onkeydown="if(event.key==='Enter')document.getElementById('adm-pass').focus()"/>
+    </div>
+    <div style="text-align:left;margin-bottom:6px">
+      <label class="label">Password</label>
+      <div style="position:relative">
+        <input class="input" id="adm-pass" type="password" placeholder="Admin password" style="padding-right:42px" onkeydown="if(event.key==='Enter')submitAdminLogin()"/>
+        <button onclick="toggleAdmPwd()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px"><i class="fa-solid fa-eye" id="adm-eye"></i></button>
+      </div>
+    </div>
+    <p id="adm-error" style="display:none;color:var(--danger);font-size:13px;margin-bottom:10px;text-align:left"></p>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeAdminLogin()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" id="adm-btn" onclick="submitAdminLogin()"><i class="fa-solid fa-unlock"></i> Login</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-area"></div>
+
+<script src="config.js"></script>
+<script src="sheets-client.js"></script>
+<script>
+const PARAM_KEYS = [
+  { key:'innovation',color:'#534AB7' },{ key:'technical_execution',color:'#0F6E56' },
+  { key:'completeness',color:'#993C1D' },{ key:'ps_alignment',color:'#185FA5' },
+  { key:'code_quality',color:'#854F0B' },
+];
+let allData = [], activeTrack = 'all';
+
+function sColor(s) {
+  return { text: s>=8?'var(--success)':s>=6?'var(--info)':s>=4?'var(--warn)':'var(--danger)',
+           bg:   s>=8?'var(--success-bg)':s>=6?'var(--info-bg)':s>=4?'var(--warn-bg)':'var(--danger-bg)' };
+}
+function rankClass(i) { return i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':''; }
+function toggleDetail(id) {
+  const row = document.getElementById('detail-'+id), icon = document.getElementById('icon-'+id);
+  row.classList.toggle('open');
+  icon.className = row.classList.contains('open') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+}
+
+function buildTracks(data) {
+  const tracks = [...new Set(data.map(d => d.track).filter(Boolean))];
+  const f = document.getElementById('track-filter');
+  f.innerHTML = '<button class="track-btn active" onclick="filterTrack(\'all\',this)">All tracks</button>';
+  tracks.forEach(t => { f.innerHTML += `<button class="track-btn" onclick="filterTrack('${t}',this)">${t}</button>`; });
+}
+
+function filterTrack(t, btn) {
+  activeTrack = t;
+  document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const data = activeTrack === 'all' ? allData : allData.filter(d => d.track === activeTrack);
+  document.getElementById('lb-count').textContent = data.length + ' submission' + (data.length!==1?'s':'');
+  const tbody = document.getElementById('lb-tbody');
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div style="text-align:center;padding:60px;color:var(--text-3)"><i class="fa-solid fa-inbox" style="font-size:40px;display:block;margin-bottom:12px"></i><p>No scored submissions yet. <a href="index.html" style="color:var(--accent)">Be the first!</a></p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  data.forEach((sub, i) => {
+    const sc = sColor(sub.total_score), scores = sub.scores || {}, fb = sub.feedback || {};
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="rank-num ${rankClass(i)}">${i+1}</div></td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="team-mini-avatar">${(sub.team_name||'?').charAt(0).toUpperCase()}</div>
+        <div><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sub.team_name}</div>
+        <div style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sub.project_title}</div></div>
+      </div></td>
+      <td><span class="badge badge-accent" style="font-size:11px">${sub.track||'—'}</span></td>
+      ${PARAM_KEYS.map(p => { const s=scores[p.key]?.score??0; const c=sColor(s); return `<td class="td-score" style="color:${c.text}">${Number(s).toFixed(1)}</td>`; }).join('')}
+      <td style="text-align:center"><span class="score-bubble" style="color:${sc.text};background:${sc.bg}">${sub.total_score.toFixed(2)}</span></td>
+      <td><button class="expand-btn" onclick="toggleDetail('${sub.id}')"><i class="fa-solid fa-chevron-down" id="icon-${sub.id}"></i></button></td>`;
+    tbody.appendChild(tr);
+
+    const paramDetail = PARAM_KEYS.map(p => {
+      const s = scores[p.key]; if (!s) return '';
+      const c = sColor(s.score);
+      return `<div><div style="font-size:11px;font-weight:600;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">${p.key.replace(/_/g,' ')}</div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;color:${c.text};min-width:24px">${Number(s.score).toFixed(1)}</span>
+        <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="width:${s.score*10}%;height:4px;background:${p.color};border-radius:2px"></div></div></div>
+        <p style="font-size:12px;color:var(--text-2);margin-top:5px;line-height:1.5">${s.reasoning||''}</p></div>`;
+    }).join('');
+
+    const strengths  = (fb.strengths ||[]).map(s=>`<li style="font-size:12px;color:var(--text-2);margin-bottom:3px">${s}</li>`).join('');
+    const weaknesses = (fb.weaknesses||[]).map(w=>`<li style="font-size:12px;color:var(--text-2);margin-bottom:3px">${w}</li>`).join('');
+
+    const dtr = document.createElement('tr');
+    dtr.className = 'detail-row'; dtr.id = 'detail-' + sub.id;
+    dtr.innerHTML = `<td class="detail-cell" colspan="10">
+      ${fb.inferred_purpose?`<div style="margin-bottom:12px;font-size:13px;color:var(--text-2);background:var(--bg);padding:10px 12px;border-radius:var(--radius-sm);border-left:3px solid var(--accent)"><strong>Inferred:</strong> ${fb.inferred_purpose}</div>`:''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">${paramDetail}</div>
+      ${fb.overall?`<p style="font-size:13px;color:var(--text-2);margin-bottom:8px"><strong>Feedback:</strong> ${fb.overall}</p>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        ${strengths ?`<div><strong style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)">Strengths</strong><ul style="margin-top:5px;padding-left:16px">${strengths}</ul></div>`:''}
+        ${weaknesses?`<div><strong style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)">To improve</strong><ul style="margin-top:5px;padding-left:16px">${weaknesses}</ul></div>`:''}
+      </div>
+    </td>`;
+    tbody.appendChild(dtr);
+  });
+}
+
+async function fetchLeaderboard() {
+  try {
+    allData = await loadAllSubmissions();
+    buildTracks(allData);
+    renderTable();
+  } catch (e) {
+    document.getElementById('lb-tbody').innerHTML = `<tr><td colspan="10"><div style="text-align:center;padding:48px;color:var(--danger)"><i class="fa-solid fa-circle-exclamation" style="font-size:32px;display:block;margin-bottom:12px"></i><p>${e.message}</p></div></td></tr>`;
+  }
+}
+
+// Admin login
+function openAdminLogin() {
+  document.getElementById('adm-user').value = '';
+  document.getElementById('adm-pass').value = '';
+  document.getElementById('adm-error').style.display = 'none';
+  document.getElementById('adm-btn').disabled = false;
+  document.getElementById('adm-btn').innerHTML = '<i class="fa-solid fa-unlock"></i> Login';
+  document.getElementById('admin-login-modal').classList.add('show');
+  setTimeout(() => document.getElementById('adm-user').focus(), 100);
+}
+function closeAdminLogin() {
+  document.getElementById('admin-login-modal').classList.remove('show');
+  document.getElementById('adm-user').value = '';
+  document.getElementById('adm-pass').value = '';
+}
+function toggleAdmPwd() {
+  const i = document.getElementById('adm-pass'), e = document.getElementById('adm-eye');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  e.className = i.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+}
+async function submitAdminLogin() {
+  const u = document.getElementById('adm-user').value.trim();
+  const p = document.getElementById('adm-pass').value.trim();
+  const errEl = document.getElementById('adm-error');
+  errEl.style.display = 'none';
+  if (!u || !p) { errEl.textContent = 'Please enter both fields.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('adm-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:15px;height:15px;border-width:2px"></span> Verifying…';
+
+  if (u === CONFIG.ADMIN_USERNAME && p === CONFIG.ADMIN_PASSWORD) {
+    sessionStorage.setItem('admin_user', u);
+    sessionStorage.setItem('admin_pass', p);
+    document.getElementById('adm-user').value = '';
+    document.getElementById('adm-pass').value = '';
+    window.location.href = 'admin.html';
+  } else {
+    document.getElementById('adm-pass').value = '';
+    errEl.textContent = 'Incorrect username or password.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-unlock"></i> Login';
+  }
+}
+
+document.getElementById('admin-login-modal').addEventListener('click', e => { if (e.target === document.getElementById('admin-login-modal')) closeAdminLogin(); });
+
+fetchLeaderboard();
+setInterval(fetchLeaderboard, 30000);
+</script>
+</body>
+</html>

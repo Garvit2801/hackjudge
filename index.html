@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>HackJudge — Submit Project</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="logo"><span class="logo-icon"><i class="fa-solid fa-gavel"></i></span>HackJudge</a>
+    <nav class="nav">
+      <a href="index.html" class="active">Submit</a>
+      <a href="leaderboard.html">Leaderboard</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-wrap page-wrap--sm">
+  <div class="hero">
+    <div class="hero-badge"><i class="fa-solid fa-sparkles"></i> Powered by Gemini AI</div>
+    <h1 class="page-title" id="event-name">HackJudge</h1>
+    <p class="page-sub">Submit your GitHub repo and get a live AI evaluation across 5 parameters.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <p class="section-head">Team information</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="label">Team name <span style="color:var(--danger)">*</span></label>
+          <input class="input" id="team_name" type="text" placeholder="e.g. Team Phoenix"/>
+        </div>
+        <div class="form-group">
+          <label class="label">Project title <span style="color:var(--danger)">*</span></label>
+          <input class="input" id="project_title" type="text" placeholder="e.g. MediTrack AI"/>
+        </div>
+        <div class="form-group full">
+          <label class="label">Team member names <span style="color:var(--danger)">*</span></label>
+          <input class="input" id="member_names" type="text" placeholder="Alice Kumar, Bob Singh, Carol Mehta"/>
+        </div>
+        <div class="form-group">
+          <label class="label">Contact email <span style="color:var(--danger)">*</span></label>
+          <input class="input" id="contact_email" type="email" placeholder="team@example.com"/>
+        </div>
+        <div class="form-group">
+          <label class="label">Track / category <span style="color:var(--danger)">*</span></label>
+          <input class="input" id="track" type="text" placeholder="e.g. HealthTech, FinTech…"/>
+        </div>
+      </div>
+
+      <hr class="section-divider"/>
+      <p class="section-head">Problem statement</p>
+      <div class="form-group">
+        <label class="label">Problem statement <span style="color:var(--danger)">*</span></label>
+        <textarea class="textarea" id="problem_statement" rows="5"
+          placeholder="Paste the problem statement here. The agent evaluates how well your project addresses this."
+          style="min-height:120px"
+          oninput="document.getElementById('ps-count').textContent=this.value.length+' chars'"></textarea>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span class="hint">The agent evaluates alignment of your solution against this.</span>
+          <span style="font-size:12px;color:var(--text-3)" id="ps-count">0 chars</span>
+        </div>
+      </div>
+
+      <hr class="section-divider"/>
+      <p class="section-head">Project repository</p>
+      <div class="form-group">
+        <label class="label">GitHub repository URL <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="github_url" type="url" placeholder="https://github.com/your-team/your-project"/>
+        <span class="hint">Repository must be public.</span>
+      </div>
+      <div class="form-group mt-16">
+        <label class="label">One-line description <span style="font-weight:400;color:var(--text-3)">(optional — helps if README is sparse)</span></label>
+        <input class="input" id="project_description" type="text" placeholder="e.g. An ML-powered triage assistant for ER patients"/>
+      </div>
+
+      <hr class="section-divider"/>
+      <p class="section-head">Gemini API key</p>
+      <div class="form-group">
+        <label class="label">Your Gemini API key <span style="color:var(--danger)">*</span></label>
+        <div class="key-field-wrap">
+          <input class="input" id="gemini_api_key" type="password" placeholder="AIza…" style="padding-right:44px"/>
+          <button class="key-toggle" onclick="toggleKey()"><i class="fa-solid fa-eye" id="eye-icon"></i></button>
+        </div>
+        <span class="hint">Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a>. Used only for your evaluation, never stored.</span>
+      </div>
+
+      <div style="display:flex;margin-top:24px">
+        <button class="btn btn-primary btn-lg full-width" id="submit-btn" onclick="submitProject()">
+          <i class="fa-solid fa-play"></i> Start Evaluation
+        </button>
+      </div>
+      <p id="submit-error" style="display:none;color:var(--danger);font-size:13px;margin-top:10px;text-align:center"></p>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:12px;color:var(--text-3);margin:16px 0 40px">
+    Scores generated by Gemini AI via static code analysis · Results appear on the leaderboard after evaluation
+  </p>
+</div>
+<div id="toast-area"></div>
+
+<script src="config.js"></script>
+<script src="sheets-client.js"></script>
+<script>
+document.getElementById('event-name').textContent = CONFIG.EVENT_NAME;
+document.title = CONFIG.EVENT_NAME + " — Submit";
+
+function toggleKey() {
+  const i = document.getElementById('gemini_api_key');
+  const e = document.getElementById('eye-icon');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  e.className = i.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+}
+function v(id) { return document.getElementById(id).value.trim(); }
+function showErr(msg) { const e = document.getElementById('submit-error'); e.textContent = msg; e.style.display = 'block'; }
+function showToast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toast-area').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+function makeId() { return (Math.random().toString(36).substring(2,6) + Math.random().toString(36).substring(2,6)).toUpperCase(); }
+
+async function submitProject() {
+  document.getElementById('submit-error').style.display = 'none';
+
+  const fields = {
+    team_name: v('team_name'), project_title: v('project_title'),
+    member_names: v('member_names'), contact_email: v('contact_email'),
+    track: v('track'), problem_statement: v('problem_statement'),
+    github_url: v('github_url'), project_description: v('project_description'),
+  };
+  const key = v('gemini_api_key');
+
+  const required = ['team_name','project_title','member_names','contact_email','track','problem_statement','github_url'];
+  for (const k of required) { if (!fields[k]) { showErr('Please fill in: ' + k.replace(/_/g,' ')); return; } }
+  if (!fields.github_url.includes('github.com')) { showErr('Please enter a valid GitHub URL.'); return; }
+  if (fields.problem_statement.length < 30) { showErr('Problem statement must be at least 30 characters.'); return; }
+  if (!key) { showErr('Please enter your Gemini API key.'); return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+  const id = makeId();
+  // Store key in sessionStorage only — never goes to GitHub
+  sessionStorage.setItem('key_' + id, key);
+  document.getElementById('gemini_api_key').value = '';
+
+  const record = {
+    id, status: 'pending',
+    created_at: new Date().toISOString(),
+    ...fields,
+    scores: null, total_score: null, feedback: null,
+  };
+
+  try {
+    await saveSubmission(id, record);
+    showToast('Submitted! Redirecting to evaluation…');
+    setTimeout(() => { window.location.href = 'judging.html?id=' + id; }, 800);
+  } catch (e) {
+    showErr('Save failed: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-play"></i> Start Evaluation';
+  }
+}
+</script>
+</body>
+</html>
