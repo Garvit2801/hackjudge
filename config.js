@@ -17,11 +17,11 @@ const CONFIG = {
   WRITE_SECRET: "hackjudge_write_2025",
 
   // ── Event settings ────────────────────────────────────────────────────────
-  EVENT_NAME: "HackJudge 2025",
-  EVENT_DATE: "May 2025",
+  EVENT_NAME: "Google Agentic Premier League",
+  EVENT_DATE: "May 2026",
 
   // ── Admin credentials ─────────────────────────────────────────────────────
   ADMIN_USERNAME: "hackadmin",
-  ADMIN_PASSWORD: "hackjudge@2025",
+  ADMIN_PASSWORD: "hackjudge@2026",
 
 };
