@@ -52,25 +52,72 @@ ${commits || "[None found]"}
 SOURCE CODE:
 ${code || "[No code accessible]"}
 
-Score each parameter 1–10. Return ONLY valid JSON, no markdown fences:
+SCORING RUBRIC — apply these exact criteria for each score:
+
+INNOVATION & CREATIVITY (weight 25%):
+10 = Completely novel concept not seen in common hackathon projects, solves a hard real problem in a unique way
+8-9 = Creative idea with clear differentiation, goes significantly beyond tutorials
+6-7 = Some originality, not entirely generic but builds on common patterns
+4-5 = Standard hackathon idea (todo app, weather app, basic chatbot) with minor twist
+2-3 = Direct copy of tutorial or boilerplate with minimal changes
+1 = No original thinking whatsoever
+
+TECHNICAL EXECUTION (weight 30%):
+10 = Production-quality architecture, clean separation of concerns, sophisticated implementation
+8-9 = Well-structured code, appropriate design patterns, good use of the tech stack
+6-7 = Functional code, some structure, minor issues but works
+4-5 = Messy or inconsistent code, some bad practices, partially works
+2-3 = Mostly broken, incorrect tool choices, poor implementation
+1 = Non-functional or trivially minimal code
+
+PROJECT COMPLETENESS (weight 25%):
+10 = Fully working end-to-end, all core features implemented, deployable demo exists
+8-9 = Most features work, minor gaps, clear entry point and runnable
+6-7 = Core feature works but secondary features missing or stubbed
+4-5 = Partially implemented, significant features missing
+2-3 = Mostly scaffolding, little real implementation
+1 = Empty or near-empty repo, nothing works
+
+PROBLEM STATEMENT ALIGNMENT (weight 15%):
+10 = Solution directly and completely addresses every requirement in the problem statement
+8-9 = Strong alignment, addresses most requirements with clear connection
+6-7 = Partially aligned, addresses the main problem but misses some requirements
+4-5 = Loosely connected, addresses the general domain but not the specific problem
+2-3 = Minimal connection to the problem statement
+1 = No meaningful connection
+
+CODE QUALITY (weight 5%):
+10 = Tests present, linting configured, no hardcoded secrets, proper .gitignore, license
+8-9 = Good practices followed, minor gaps
+6-7 = Some good practices, some neglected
+4-5 = Poor practices throughout
+1-3 = No practices followed, potential security issues
+
+CRITICAL SCORING RULES:
+- Count the actual number of implemented files and functions before scoring completeness
+- Check if functions have real logic or are just stubs (pass/TODO/return null)
+- Compare the problem statement requirements word by word against what is built
+- Give the SAME score if you see the SAME evidence — be consistent
+- Do not round up out of generosity — score what you see, not what you imagine
+- A project with 3 real files scores lower than one with 10 real files, all else equal
+
+Return ONLY valid JSON, no markdown fences:
 
 {
   "inferred_purpose": "<paragraph describing what this project actually does based on code evidence>",
   "confidence": "high|medium|low",
   "analysis_mode": "readme_assisted|code_only|description_assisted",
   "scores": {
-    "innovation":          { "score": <1-10>, "reasoning": "<2-3 sentences citing specific evidence>" },
-    "technical_execution": { "score": <1-10>, "reasoning": "<2-3 sentences citing specific evidence>" },
-    "completeness":        { "score": <1-10>, "reasoning": "<2-3 sentences citing specific evidence>" },
-    "ps_alignment":        { "score": <1-10>, "reasoning": "<2-3 sentences citing specific evidence>" },
-    "code_quality":        { "score": <1-10>, "reasoning": "<2-3 sentences citing specific evidence>" }
+    "innovation":          { "score": <integer 1-10>, "reasoning": "<cite 2-3 specific files/functions as evidence>" },
+    "technical_execution": { "score": <integer 1-10>, "reasoning": "<cite 2-3 specific files/functions as evidence>" },
+    "completeness":        { "score": <integer 1-10>, "reasoning": "<cite 2-3 specific files/functions as evidence>" },
+    "ps_alignment":        { "score": <integer 1-10>, "reasoning": "<cite specific requirements met or missed>" },
+    "code_quality":        { "score": <integer 1-10>, "reasoning": "<cite specific files/configs as evidence>" }
   },
   "overall_feedback": "<3-4 sentences of holistic evaluation>",
-  "strengths":  ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "weaknesses": ["<weakness 1>", "<weakness 2>"]
-}
-
-RULES: Base scores on code evidence not README claims. Empty functions/TODOs = incomplete. Single midnight commit = rushed.`;
+  "strengths":  ["<specific strength with file/feature evidence>", "<specific strength>", "<specific strength>"],
+  "weaknesses": ["<specific weakness with evidence>", "<specific weakness>"]
+}`;
 }
 
 function extractJson(text) {
@@ -110,7 +157,7 @@ async function analyzeWithGemini(repo, problemStatement, apiKey, projectDescript
   const prompt  = buildPrompt(repo, problemStatement, projectDescription);
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.25, maxOutputTokens: 8192, topP: 0.8 },
+    generationConfig: { temperature: 0.0, maxOutputTokens: 8192, topP: 1.0 },
   };
 
   let lastError = null;
